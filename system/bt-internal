@@ -1,0 +1,39 @@
+#!/bin/bash
+# Switch the internal Realtek Bluetooth USB device on or off.
+# Only touches the USB device 0bda:b009. Wi-Fi is not affected.
+#   on / off / status  -> switch only
+#   user-on / user-off -> switch and remember the manual choice
+#   flag               -> prints yes if "off" was chosen manually
+
+VID=0bda
+PID=b009
+FLAG=/var/lib/bt-internal-manual-off
+
+find_dev() {
+  local d
+  for d in /sys/bus/usb/devices/*; do
+    [[ -f $d/idVendor && -f $d/idProduct ]] || continue
+    if [[ $(<"$d/idVendor") == "$VID" && $(<"$d/idProduct") == "$PID" ]]; then
+      echo "$d"
+      return 0
+    fi
+  done
+  return 1
+}
+
+cmd=${1:-}
+
+case "$cmd" in
+  flag) [[ -e $FLAG ]] && echo yes || echo no; exit 0 ;;
+  user-off) touch "$FLAG"; cmd=off ;;
+  user-on)  rm -f "$FLAG"; cmd=on ;;
+esac
+
+dev=$(find_dev) || { echo absent; exit 1; }
+
+case "$cmd" in
+  on)     echo 1 > "$dev/authorized" ;;
+  off)    echo 0 > "$dev/authorized" ;;
+  status) [[ $(<"$dev/authorized") == 1 ]] && echo on || echo off ;;
+  *)      echo "Usage: bt-internal <on|off|status|user-on|user-off|flag>" >&2; exit 1 ;;
+esac

@@ -1,0 +1,6 @@
+# External USB Bluetooth plugged in -> internal Bluetooth off
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{PRODUCT}=="33fa/1/*", RUN+="/usr/local/bin/bt-policy add-external"
+# External USB Bluetooth unplugged -> internal Bluetooth back on
+ACTION=="remove", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{PRODUCT}=="33fa/1/*", RUN+="/usr/local/bin/bt-policy remove-external"
+# Internal Bluetooth appears (boot) -> off if the external one is already there
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{PRODUCT}=="bda/b009/*", RUN+="/usr/local/bin/bt-policy add-internal"

@@ -1,0 +1,68 @@
+#!/bin/bash
+# Per-adapter Bluetooth control, addressed by MAC.
+#   bt-adapter list            -> "MAC kind state" per adapter
+#   bt-adapter on  <MAC>
+#   bt-adapter off <MAC>
+
+INTERNAL_MAC="80:91:33:51:65:54"
+
+hci_for_mac() {
+  local h n mac
+  for h in /sys/class/bluetooth/hci[0-9]*; do
+    n=${h##*/}
+    [[ $n == *:* ]] && continue
+    mac=$(busctl get-property org.bluez "/org/bluez/$n" org.bluez.Adapter1 Address 2>/dev/null | awk -F'"' '{print $2}')
+    if [[ ${mac^^} == "${1^^}" ]]; then echo "$n"; return 0; fi
+  done
+  return 1
+}
+
+rfkill_id_for() {
+  rfkill list bluetooth | awk -F': ' -v n="$1" '$2==n {print $1}'
+}
+
+list() {
+  local h n mac powered state internal_state
+  internal_state=$(/usr/local/bin/bt-internal status 2>/dev/null)
+  case "$internal_state" in
+    on|off) echo "$INTERNAL_MAC internal $internal_state" ;;
+    *)      echo "$INTERNAL_MAC internal absent" ;;
+  esac
+  for h in /sys/class/bluetooth/hci[0-9]*; do
+    n=${h##*/}
+    [[ $n == *:* ]] && continue
+    mac=$(busctl get-property org.bluez "/org/bluez/$n" org.bluez.Adapter1 Address 2>/dev/null | awk -F'"' '{print $2}')
+    [[ -z $mac || ${mac^^} == "$INTERNAL_MAC" ]] && continue
+    powered=$(busctl get-property org.bluez "/org/bluez/$n" org.bluez.Adapter1 Powered 2>/dev/null | awk '{print $2}')
+    [[ $powered == true ]] && state=on || state=off
+    echo "${mac^^} external $state"
+  done
+}
+
+cmd=${1:-}
+mac=${2:-}
+
+case "$cmd" in
+  list) list ;;
+  on|off)
+    [[ -n $mac ]] || { echo "Usage: bt-adapter $cmd <MAC>" >&2; exit 1; }
+    if [[ ${mac^^} == "$INTERNAL_MAC" ]]; then
+      sudo -n /usr/local/bin/bt-internal "user-$cmd"
+      exit $?
+    fi
+    hci=$(hci_for_mac "$mac") || { echo "adapter $mac not found" >&2; exit 1; }
+    id=$(rfkill_id_for "$hci")
+    [[ -n $id ]] || { echo "no rfkill entry for $hci" >&2; exit 1; }
+    if [[ $cmd == off ]]; then
+      rfkill block "$id"
+    else
+      rfkill unblock "$id"
+      for _ in 1 2 3 4 5 6 7 8 9 10; do
+        busctl get-property org.bluez "/org/bluez/$hci" org.bluez.Adapter1 Powered 2>/dev/null | grep -q true && exit 0
+        sleep 0.2
+      done
+      busctl set-property org.bluez "/org/bluez/$hci" org.bluez.Adapter1 Powered b true
+    fi
+    ;;
+  *) echo "Usage: bt-adapter <list|on|off> [MAC]" >&2; exit 1 ;;
+esac

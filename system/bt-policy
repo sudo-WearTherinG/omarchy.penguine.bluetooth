@@ -1,0 +1,29 @@
+#!/bin/bash
+# Automatic rules for the two Bluetooth adapters. Called by udev.
+#   add-external     external plugged in  -> internal off
+#   remove-external  external unplugged   -> internal on, unless turned off by hand
+#   add-internal     internal appeared    -> off if external present or turned off by hand
+
+EXT_VID=33fa
+EXT_PID=0001
+FLAG=/var/lib/bt-internal-manual-off
+
+external_present() {
+  local d
+  for d in /sys/bus/usb/devices/*; do
+    [[ -f $d/idVendor && -f $d/idProduct ]] || continue
+    if [[ $(<"$d/idVendor") == "$EXT_VID" && $(<"$d/idProduct") == "$EXT_PID" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+case "${1:-}" in
+  add-external)    /usr/local/bin/bt-internal off ;;
+  remove-external) [[ -e $FLAG ]] || /usr/local/bin/bt-internal on ;;
+  add-internal)
+    if external_present || [[ -e $FLAG ]]; then /usr/local/bin/bt-internal off; fi ;;
+  *) echo "Usage: bt-policy <add-external|remove-external|add-internal>" >&2; exit 1 ;;
+esac
+exit 0
