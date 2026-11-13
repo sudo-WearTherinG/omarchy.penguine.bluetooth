@@ -1,10 +1,35 @@
 # Penguine Bluetooth
 
 A Bluetooth panel for Omarchy that manages two Bluetooth adapters separately.
-It was built to test whether a laptop's built-in Bluetooth hurts Wi-Fi, by
-switching the internal adapter off and using an external USB one. On the
-author's laptop Wi-Fi became stable afterwards, but that is one machine and
-not a proven cause.
+
+## Why this exists
+
+On the author's HP 15-da0xxx laptop (Realtek RTL8723DE Wi-Fi/Bluetooth combo
+card), Wi-Fi became slow and unstable roughly every 20 minutes whenever
+Bluetooth earbuds were in use, and reconnecting to Wi-Fi fixed it for a while.
+Changing the router channel (1, 6 and 11 were tried) did not help. The
+suspected cause is that the Wi-Fi and Bluetooth parts of this chip interfere
+with each other, possibly because they share an antenna. That is a suspicion,
+not a confirmed diagnosis.
+
+After switching Bluetooth to an external USB adapter and turning the internal
+one off, Wi-Fi stayed stable for several days on that laptop, including after
+a clean reinstall of Omarchy. That is one machine, so it is evidence, not
+proof.
+
+## If you don't need Bluetooth while working
+
+You don't need this plugin. Turn Bluetooth off completely when you aren't
+using it, with Omarchy's Bluetooth switch.
+
+On Windows, open Device Manager, expand "Bluetooth", right-click the internal
+adapter and choose "Disable device". Wi-Fi is listed under "Network adapters"
+and is not affected. The author has not tested this on Windows.
+
+## If you need Bluetooth while working
+
+Use an external USB Bluetooth adapter and switch the internal one off. This
+plugin automates that on Omarchy, with a switch for each adapter in the panel.
 
 ## What it does
 
@@ -13,7 +38,7 @@ not a proven cause.
 - External adapter unplugged: the internal one switches back on, unless you
   switched it off by hand.
 - A manual "off" for the internal adapter is saved as a flag file, so it should
-  survive reboots.
+  survive reboots. The reboot behavior has not been tested yet.
 - Wi-Fi is never touched. The Wi-Fi driver and btusb stay as they are.
 
 ## Install
