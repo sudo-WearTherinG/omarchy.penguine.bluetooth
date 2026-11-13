@@ -2,6 +2,8 @@
 
 A Bluetooth panel for Omarchy that manages two Bluetooth adapters separately.
 
+![Penguine Bluetooth panel preview](preview.png)
+
 ## Why this exists
 
 On the author's HP 15-da0xxx laptop (Realtek RTL8723DE Wi-Fi/Bluetooth combo
